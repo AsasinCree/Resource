@@ -3,7 +3,7 @@ pre, code{font-size:14px;  font-family: Roboto, 'Courier New', Consolas, Inconso
 code{margin:0 3px; color: #007180; padding:0 6px;  white-space: pre-wrap;  background-color:rgb(182, 211, 238);  border-radius:2px;  display: inline;}
 pre{font-size:15px;  line-height:20px;}precode{  white-space: pre;  overflow: auto;  border-radius:3px;  padding:5px10px;  display: block !important;}
 strong, b{color:#BF360C;}
-em, i{color:#e7dd52;}
+em, i{color:rgb(231, 221, 82);}
 big{font-size:22px;  color:#009688;  font-weight: bold;  vertical-align: middle;  border-bottom:1px solid #eee;}
 small{font-size:12px;  line-height:22px;}
 hr{border-bottom:0.05em dotted rgb(245, 232, 52);  margin:10px auto;}
