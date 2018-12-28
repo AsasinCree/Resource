@@ -1,0 +1,147 @@
+
+Cannot resolve the collation conflict between "SQL_Latin1_General_CP1_CI_AS" and "Chinese_PRC_CI_AS" in the equal to operation.
+修改相应存储过程创建临时表语句  CREATE TABLE #MessageKeys (MessageKey nvarchar(255) [collate database_default])
+
+SQL Server Profiler的中文意思是SQL  Server事件探查，一个Sql的监视工具，可以具体到每一行Sql语句，每一次操作，和每一次的连接。可以找出执行的存储过程
+勾选 RPC:Completed  以及  SQL:BatchCompleted
+TextData 列可以填入存储过程名，表名等，两边加上 % 进行筛选。
+ClientProcessID 指出线程 ID
+LoginName
+HostName: visitor's location
+DatabaseName: access database
+ServerName
+
+死锁可以在 Management-Extended Events-Sessions-system_health-package0.event_file 可以看到记录[TD搜 deadlock yao总]
+
+查看任务管理器发现 SQL Server 占用内存很小(低于400)，导致正常读取会非常慢。在 SQL Server 中设置该实例的最小内存为 700M
+
+ELK Stack, a technology stack composed of Elasticsearch, Logstash, and Kibana(报表), now called Elastic Stack
+Simon - ELK Log Analysis and Monitoring System: 相当于上述三个的整合工具
+
+远程桌面无法复制粘贴：杀掉进程 rdpclip.exe (如果有的话，一般是在服务器机器上)，在 Run 窗口 输入 rdpclip.exe 回车
+
+在CMD里输入：Systeminfo | findstr /i "System Model"
+如果System Model：后面含有Virutal就是虚拟机，其他都是物理机
+
+sn -Ra xx.dll xx.key     重打强名(必须是同一个钥匙对)
+sn -k xxx.snk   随机生成一个钥匙对
+ildasm xxx.dll /out=xxx.il      反编译某dll
+ilasm xxx.il /dll /resource=xxx.res /key=xxx.snk /optimize    编译 dll 并打强名
+
+C:\Program Files (x86)\Microsoft SDKs\Windows\vX.XA\bin\NETFX x.x.x Tools\(x64) 目录下 
+ildasm.exe 工具： windows 反编译工具
+打开后拖入任意 dll， 双击 "MAINFEST" 滑到倒数第二行。
+.corflags 0x00000001    //  ILONLY 数字1表示未打强名，9表示打了（如果用sn -T xx.dll 有 token key 不保证打了强名）
+
+
+Q:解决端口占用
+A:netstat -aon|findstr 3007 查出来最后一列是 pid, 在进程中杀掉即可
+paramter explanation
+1. -a: Displays all connections and listening ports.
+2. -n: Displays addresses and port numbers in numerical form.
+3. -o: Displays the owning process ID associated with each connection.
+
+在运行里面输入gpedit.msc回车, 进入Copmuter Configuration -> Administrator Templates -> Windows Components -> Remote Desktop Services -> Remote Deskop Session Host -> Connections 
+里面有两个选项，
+把Restrict Remote Desktop...设置为Disable
+还有一个Limit number of connections 点进去 有个Rd Maximum Connections allowed 设置为2，
+应该就可以两个用户同时登录了
+
+--整合列数据，逗号隔开	
+DECLARE @ResultString nvarchar(max)
+SELECT @ResultString = COALESCE(@ResultString+',' ,'') + CONVERT(NVARCHAR, [colum_name]) FROM [table] -- ORDER BY [column]
+
+sql 循环
+DECLARE C1 CURSOR FOR
+		SELECT TABLEID,INDEXID FROM #TMP  
+	OPEN C1
+		FETCH NEXT FROM C1 INTO @TABLEID,@INDEXID
+		WHILE @@FETCH_STATUS <> -1 或者写成 WHILE @@FETCH_STATUS = 0
+			BEGIN 
+                ...
+            END
+    CLOSE C1
+DEALLOCATE C1
+
+查询所有表信息: 行数、数据大小、索引大小等等
+DECLARE @temp table ( NAME VARCHAR(100) , ROWS INT, reserved VARCHAR(100), DATA VARCHAR(100), index_size VARCHAR(100), unused VARCHAR(100))
+INSERT INTO @temp
+EXEC sp_msforEachTable ' exec sp_spaceused ''?'' '
+select * from @temp
+
+Copy table column(@dstName 并不存在会自动创建一个)
+    SELECT * INTO @dstName FROM @srcName where 1=2;
+
+Get list of indexes still needing to be partitioned
+    SELECT *
+    FROM sys.dm_db_partition_stats PStats
+    INNER JOIN	(required tables) PT
+    ON PStats.[Object_id] = PT.[Object_ID]
+    WHERE PStats.[object_id]  >100 --non sys
+    GROUP BY PStats.[object_id], PStats.[index_id]
+    HAVING sum(1)=1     -- 这个表示每个分组的条数等于1，就表示只有一个分区，就是没分区
+
+查询 FK 
+    1. EXEC sp_fkeys @pktable_name = 'HIST_Transaction', @pktable_owner = 'dbo'
+    2. SELECT PT.name 引用表名,PC.name 引用列名,RT.name 被引用表名,RC.name 被引用列名
+        FROM sys.foreign_key_columns JOIN sys.objects PT ON sys.foreign_key_columns.parent_object_id=PT.object_id
+        JOIN sys.objects RT ON sys.foreign_key_columns.referenced_object_id=RT.object_id
+        JOIN sys.columns PC ON sys.foreign_key_columns.parent_object_id=PC.object_id AND sys.foreign_key_columns.parent_column_id=PC.column_id
+        JOIN sys.columns RC ON sys.foreign_key_columns.referenced_object_id=RC.object_id AND sys.foreign_key_columns.referenced_column_id=RC.column_id
+        where PT.name = 'HIST_Transaction'
+查询 PK
+    1. EXEC sp_pkeys @table_name = 'HIST_Transaction'
+
+清除 database log: 一般也是磁盘空间不足的罪魁祸首。可以在数据库属性里设置 Log 大小限制(如果日志达到上限,则以后的数据库处理会失败,在清理日志后才能恢复)，或者数据库选项里 AutoShrink 设为 true(有可能损坏数据库或丢失数据)
+    首先要选对数据库名
+    ALTER DATABASE [UnifiedCAD] SET RECOVERY SIMPLE WITH NO_WAIT    --必须是简单模式
+    GO
+    --backup log UnifiedCAD to disk='..\Backup\UnifiedCAD20170913.log'   --可不做
+    GO
+    DBCC SHRINKFILE (N'UnifiedCAD_Log', 0, TRUNCATEONLY)    如果报错 Could not locate file 'OperationsManagerDW_Log' for database 'OperationsManagerDW' in sys.database_files. The file either does not exist, or was dropped. 则到 db 属性里查看具体名称，有时候 logic 名称不是 db 名称
+    GO
+    dbcc opentran (UnifiedCAD)  --检查并关闭所有连接
+    ALTER DATABASE [UnifiedCAD] SET RECOVERY FULL WITH NO_WAIT
+    GO
+若以上脚本无效，出现错误 because of minimum log space required。 可 Dettach 删掉 Log 文件再 Attach
+1.清空日志
+DUMP TRANSACTION 库名 WITH NO_LOG
+2.截断事务日志
+BACKUP LOG 数据库名 WITH NO_LOG
+
+SQL SERVER 中字符串拼接的子字符串若有 NULL, 则整个字符串变为 NULL
+
+windows下cmd命令行乱码, 调成显示UTF8字符设置(CHCP命令)   chcp <active code>     eg: 437 美国英语; 936 默认; 65001 UTF-8
+
+Mock: https://github.com/Moq/moq4/wiki/Quickstart
+Mock 的 setup 只能作用在 interface 接口类的成员上或者非 interface 类的 virtual 成员上, 相当于对该成员进行模拟调用
+所以被 Mock 的对象 debug 不会进入真正的方法里, 会调用 setup 返回结果
+
+Git 使用教程
+https://www.cnblogs.com/superjt/p/5977719.html
+
+use Python to connect Azure: https://docs.microsoft.com/zh-cn/azure/sql-database/sql-database-connect-query-python
+use vscode to connect Azure: install mssql module, use MS SQ command
+
+MSSQL   共享数据
+grant all privileges on *.* to 'Adam'@'172.20.16.26'identified by 'M0t0r0la' with grant option;
+
+POC
+Proof of concept, used to demonstrate the feasibility of an idea
+就是Prototype(雏形)
+验证一下这个主要的想法，如果没问题，才开始下一步
+这个是最关键的一步
+
+SQL Server 使用同一个 bak 数据库备份文件 restore 成多个 DB 方式
+General-Destination-Database加上后缀; Files-Restore As-DB和Log名字加上相同后缀； Options-Tail-Log backup 取消勾选 
+
+WAIT DEBUG, WAIT ATTACH
+while (!Debugger.IsAttached)
+{
+    Thread.Sleep(100);
+}
+
+VS debug dispaly external code: uncheck Just My Code
+
+The database principal owns a schema in the database, and cannot be dropped
+https://blog.csdn.net/kevinsqlserver/article/details/8128795
